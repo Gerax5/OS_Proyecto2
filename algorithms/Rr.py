@@ -1,5 +1,3 @@
-from collections import deque
-
 def round_robin_scheduler(processes, quantum):
     processes = sorted(processes, key=lambda x: x[2])  
     n = len(processes)
@@ -7,7 +5,7 @@ def round_robin_scheduler(processes, quantum):
     arrival_time = {pid: at for pid, _, at, _ in processes}
     original_map = {pid: (pid, bt, at, pr) for pid, bt, at, pr in processes}
 
-    queue = deque()
+    queue = [] 
     timeline = []
     time = 0
     waiting_times = {}
@@ -25,11 +23,11 @@ def round_robin_scheduler(processes, quantum):
             time += 1
             continue
 
-        pid = queue.popleft()
+        pid = queue.pop(0) 
         bt_left = remaining_bt[pid]
         exec_time = min(quantum, bt_left)
 
-        for i in range(exec_time):
+        for _ in range(exec_time):
             timeline.append((time, pid))
             time += 1
             while index < n and processes[index][2] <= time:
