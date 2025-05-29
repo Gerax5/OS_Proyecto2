@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 def draw_gantt(processes, timeline, step):
-    fig, ax = plt.subplots(figsize=(8, 1 + len(processes) * 0.5))  # figura más pequeña
+    fig, ax = plt.subplots(figsize=(8, 1 + len(processes) * 0.5))  
 
     process_ids = sorted(set([p[0] for p in processes]))
     process_row = {pid: i for i, pid in enumerate(process_ids)}
@@ -11,9 +11,9 @@ def draw_gantt(processes, timeline, step):
         t, pid = timeline[i]
         if pid not in colors:
             colors[pid] = f"C{len(colors)}"
-        y = 5 + 5 * process_row[pid]  # menos espacio entre filas
+        y = 5 + 5 * process_row[pid]  
         ax.broken_barh([(t, 1)], (y, 4), facecolors=colors[pid])
-        ax.text(t + 0.1, y + 2, pid, fontsize=6)  # texto más pequeño
+        ax.text(t + 0.1, y + 2, pid, fontsize=6) 
 
     ax.set_xlim(0, max(t for t, _ in timeline) + 1)
     ax.set_ylim(2, 5 + 5 * len(process_ids))

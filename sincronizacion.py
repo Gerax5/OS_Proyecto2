@@ -79,30 +79,30 @@ def simulate_with_mechanism(actions, resource_defs, mechanism):
 
 
 def draw_sync_gantt(timeline, step):
-    fig, ax = plt.subplots(figsize=(min(20, step), 5))
-    y_map = {}
-    ypos = 10
+    procesos = sorted(set(pid for _, pid, *_ in timeline))
+    alto_por_proceso = 6  # altura por barra individual
+    altura_total = max(2, len(procesos) * alto_por_proceso / 10)  # altura mínima 2
+    ancho_total = max(6, min(12, step))  # limitar ancho a 12 máx
 
-    for _, pid, *_ in timeline:
-        if pid not in y_map:
-            y_map[pid] = ypos
-            ypos += 10
+    fig, ax = plt.subplots(figsize=(ancho_total, altura_total))
+    y_map = {pid: i * alto_por_proceso for i, pid in enumerate(procesos)}
 
     for cycle, pid, res, action, state in timeline:
         if cycle >= step:
             continue
         color = "green" if state == "ACCESSED" else "red"
         y = y_map[pid]
-        ax.broken_barh([(cycle, 1)], (y, 8), facecolors=color)
-        ax.text(cycle + 0.05, y + 3, f"{action}:{res}", fontsize=6, color="white" if color == "red" else "black")
+        ax.broken_barh([(cycle, 1)], (y, alto_por_proceso - 2), facecolors=color)
+        ax.text(cycle + 0.05, y + 1.5, f"{action}:{res}", fontsize=5, color="white" if color == "red" else "black")
 
     ax.set_xlim(0, step)
-    ax.set_ylim(0, ypos + 10)
-    ax.set_xlabel("Ciclos")
-    ax.set_yticks([y + 4 for y in y_map.values()])
-    ax.set_yticklabels(y_map.keys())
-    ax.set_title("Simulación de Accesos a Recursos")
-    ax.grid(True)
+    ax.set_ylim(0, len(procesos) * alto_por_proceso)
+    ax.set_xlabel("Ciclos", fontsize=8)
+    ax.set_yticks([y + alto_por_proceso / 2 for y in y_map.values()])
+    ax.set_yticklabels(procesos, fontsize=7)
+    ax.set_title("Simulación de Accesos a Recursos", fontsize=10)
+    ax.grid(True, linestyle='--', alpha=0.5)
+    fig.tight_layout()
     return fig
 
 # ---------------------------------------
@@ -168,9 +168,3 @@ def show_sincronizacion_tab():
         with st.expander("Ver timeline (datos crudos)"):
             st.dataframe(timeline, use_container_width=True)
 
-
-# ---------------------------------------
-# Ejecutar la interfaz
-# ---------------------------------------
-if __name__ == "__main__":
-    show_sincronizacion_tab()
