@@ -10,7 +10,6 @@ def srtf_scheduler(processes):
     time = 0
     timeline = []
     waiting_times = {}
-    last_pid = None
     executed_processes = []
 
     while len(completed) < n:

@@ -61,16 +61,16 @@ def simulate_with_mechanism(actions, resource_defs, mechanism):
             if acciones_en_proceso[pid] is not None:
                 accion, recurso, ciclo_obj = acciones_en_proceso[pid]
                 r = resources[recurso]
-                print(f"[{ciclo}] {pid} intenta {accion} en {recurso} (ciclo objetivo: {ciclo_obj})")
-                print(f"    Estado recurso: in_use={r.in_use}, count={r.count}")
+                # print(f"[{ciclo}] {pid} intenta {accion} en {recurso} (ciclo objetivo: {ciclo_obj})")
+                # print(f"    Estado recurso: in_use={r.in_use}, count={r.count}")
                 if r.try_access():
-                    print(f"[{ciclo}] {pid} ACCEDE a {recurso}")
+                    # print(f"[{ciclo}] {pid} ACCEDE a {recurso}")
                     timeline.append((ciclo, pid, recurso, accion, "ACCESSED"))
                     recursos_a_liberar.append(recurso)
                     acciones_por_proceso[pid].pop(0)
                     acciones_en_proceso[pid] = None
                 else:
-                    print(f"[{ciclo}] {pid} ESPERA por {recurso}")
+                    # print(f"[{ciclo}] {pid} ESPERA por {recurso}")
                     timeline.append((ciclo, pid, recurso, accion, "WAITING"))
 
                 hay_pendientes = True
@@ -85,9 +85,9 @@ def simulate_with_mechanism(actions, resource_defs, mechanism):
 
 def draw_sync_gantt(timeline, step):
     procesos = sorted(set(pid for _, pid, *_ in timeline))
-    alto_por_proceso = 6  # altura por barra individual
-    altura_total = max(2, len(procesos) * alto_por_proceso / 10)  # altura mínima 2
-    ancho_total = max(6, min(12, step))  # limitar ancho a 12 máx
+    alto_por_proceso = 6 
+    altura_total = max(2, len(procesos) * alto_por_proceso / 10)  
+    ancho_total = max(6, min(12, step))  
 
     fig, ax = plt.subplots(figsize=(ancho_total, altura_total))
     y_map = {pid: i * alto_por_proceso for i, pid in enumerate(procesos)}
@@ -110,9 +110,7 @@ def draw_sync_gantt(timeline, step):
     fig.tight_layout()
     return fig
 
-# ---------------------------------------
-# Construcción de tabla por ciclo
-# ---------------------------------------
+
 def build_state_table(timeline):
     data = {}
     for cycle, pid, res, action, state in timeline:
