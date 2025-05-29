@@ -5,7 +5,7 @@ def srtf_scheduler(processes):
     remaining_bt = {pid: bt for pid, bt, _, _ in processes}
     arrival_map = {pid: at for pid, _, at, _ in processes}
     original_map = {pid: (pid, bt, at, pr) for pid, bt, at, pr in processes}
-    completed = set()
+    completed = {}
 
     time = 0
     timeline = []

@@ -24,12 +24,17 @@ def parse_actions(file):
 def simulate_with_mechanism(actions, resource_defs, mechanism):
     timeline = []
 
+    # resources = {
+    #     name: Mutex(name, 1) if count == 1 else Semaforo(name, count)
+    #     for name, count in resource_defs.items()
+    # }
+
     resources = {
-        name: Mutex(name, 1) if count == 1 else Semaforo(name, count)
+        name: Mutex(name, 1) if mechanism == "Mutex" else Semaforo(name, count)
         for name, count in resource_defs.items()
     }
 
-    # Acciones por proceso
+
     acciones_por_proceso = {}
     for pid, accion, recurso, ciclo in actions:
         acciones_por_proceso.setdefault(pid, []).append((accion, recurso, ciclo))
@@ -121,9 +126,6 @@ def build_state_table(timeline):
     df.fillna("", inplace=True)
     return df
 
-# ---------------------------------------
-# Componente de interfaz
-# ---------------------------------------
 def show_sincronizacion_tab():
     st.header("Simulación de Mecanismos de Sincronización")
 
@@ -133,28 +135,41 @@ def show_sincronizacion_tab():
         a_file = st.file_uploader("Archivo de acciones", type="txt", key="act_file")
 
     if p_file and r_file and a_file:
-        st.markdown("### Configuración Automática de Recursos")
-        st.info("Los recursos con `count = 1` se manejan como **Mutex**, y los que tienen `count > 1` como **Semáforos**.")
+        # st.markdown("### Configuración Automática de Recursos")
+        # Para asignacion automatica de Mutex y Semáforos
+        # st.info("Los recursos con `count = 1` se manejan como **Mutex**, y los que tienen `count > 1` como **Semáforos**.")
+        st.markdown("### Configuración")
+        mechanism = st.radio("Selecciona mecanismo de sincronización", ["Mutex", "Semáforo"])
 
         processes = parse_processes(p_file)
         resource_counts = parse_resources(r_file)
         actions = parse_actions(a_file)
 
-        st.markdown("### Recursos y tipo de sincronización asignado:")
-        resource_types = {}
-        for name, count in resource_counts.items():
-            tipo = "Mutex" if count == 1 else "Semáforo"
-            resource_types[name] = tipo
-            st.markdown(f"- **{name}**: {tipo} (count = {count})")
+        if mechanism == "Semáforo":
+            st.markdown("### Configuración de semáforos")
+            semaphore_counts = {}
+            for resource in resource_counts.keys():
+                semaphore_counts[resource] = st.number_input(
+                    f"Contador para {resource}:", min_value=1, value=resource_counts[resource], key=f"sem_{resource}"
+                )
+            resource_counts = semaphore_counts
 
-        resources = {}
-        for name, count in resource_counts.items():
-            if count == 1:
-                resources[name] = Mutex(name, 1)
-            else:
-                resources[name] = Semaforo(name, count)
 
-        timeline = simulate_with_mechanism(actions, resource_counts, "AUTOMATICO")
+        # st.markdown("### Recursos y tipo de sincronización asignado:")
+        # resource_types = {}
+        # for name, count in resource_counts.items():
+        #     tipo = "Mutex" if count == 1 else "Semáforo"
+        #     resource_types[name] = tipo
+        #     st.markdown(f"- **{name}**: {tipo} (count = {count})")
+
+        # resources = {}
+        # for name, count in resource_counts.items():
+        #     if count == 1:
+        #         resources[name] = Mutex(name, 1)
+        #     else:
+        #         resources[name] = Semaforo(name, count)
+
+        timeline = simulate_with_mechanism(actions, resource_counts, mechanism)
         max_cycle = max(c for c, *_ in timeline) + 1
 
         step = st.slider("Ciclo actual", 1, max_cycle, max_cycle, key="sync_slider")

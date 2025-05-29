@@ -50,9 +50,6 @@ def show_calendarizacion_tab():
             timeline, avg_waiting_time, executed = priority_scheduler(processes)
             print(f"Procesos ejecutados priority: {executed}")
 
-            
-
-
         max_step = len(timeline)
         step = st.slider("Ciclo actual", 1, max_step, 1, key=f"slider_{scheduler_option}")
 
