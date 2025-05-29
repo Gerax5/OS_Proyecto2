@@ -5,7 +5,7 @@ def srtf_scheduler(processes):
     remaining_bt = {pid: bt for pid, bt, _, _ in processes}
     arrival_map = {pid: at for pid, _, at, _ in processes}
     original_map = {pid: (pid, bt, at, pr) for pid, bt, at, pr in processes}
-    completed = {}
+    completed = set()
 
     time = 0
     timeline = []
@@ -26,7 +26,8 @@ def srtf_scheduler(processes):
                 executed_processes.append(original_map[pid])
         else:
             # CPU is idle
-            timeline.append((time, "idle"))
+            # timeline.append((time, "idle"))
+            pass
 
         time += 1
 

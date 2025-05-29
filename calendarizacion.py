@@ -25,38 +25,42 @@ def show_calendarizacion_tab():
         uploaded_file = st.file_uploader("Sube un archivo .txt con procesos", type="txt")
 
     with col2:
-        scheduler_option = st.selectbox("Algoritmo de planificación", ["FIFO", "SJF", "SRT", "Round Robin", "Priority"])
+        selected_algorithms = st.multiselect(
+            "Selecciona uno o más algoritmos de planificación",
+            ["FIFO", "SJF", "SRT", "Round Robin", "Priority"],
+            default=["FIFO"] 
+        )
+
 
     if uploaded_file:
         processes = load_processes(uploaded_file)
+        max_step = 0
+        step = 0
+        resultados = {}
 
-        if scheduler_option == "FIFO":
-            timeline, avg_waiting_time, executed = fifo_scheduler(processes)
-            print(f"Procesos ejecutados fifo: {executed}")
+        if "Round Robin" in selected_algorithms:
+            quantum = st.number_input("Quantum para Round Robin", min_value=1, value=2, step=1)
 
-        elif scheduler_option == "SJF":
-            timeline, avg_waiting_time, executed = sjf_scheduler(processes)
-            print(f"Procesos ejecutados sjf: {executed}")
+        for alg in selected_algorithms:
+            if alg == "FIFO":
+                timeline, avg, executed = fifo_scheduler(processes)
+            elif alg == "SJF":
+                timeline, avg, executed = sjf_scheduler(processes)
+            elif alg == "SRT":
+                timeline, avg, executed = srtf_scheduler(processes)
+            elif alg == "Priority":
+                timeline, avg, executed = priority_scheduler(processes)
+            elif alg == "Round Robin":
+                timeline, avg, executed = round_robin_scheduler(processes, quantum)
+            
+            resultados[alg] = (timeline, avg, executed)
+            max_step = max(max_step, len(timeline))
 
-        elif scheduler_option == "SRT":
-            timeline, avg_waiting_time, executed = srtf_scheduler(processes)
-            print(f"Procesos ejecutados srt: {executed}")
-        
-        elif scheduler_option == "Round Robin":
-            quantum = st.number_input("Quantum (ciclos)", min_value=1, value=2, step=1)
-            timeline, avg_waiting_time, executed = round_robin_scheduler(processes, quantum)
-        
-        elif scheduler_option == "Priority":
-            timeline, avg_waiting_time, executed = priority_scheduler(processes)
-            print(f"Procesos ejecutados priority: {executed}")
+        step = st.slider("Ciclo actual", 1, max_step, max_step)
 
-        max_step = len(timeline)
-        step = st.slider("Ciclo actual", 1, max_step, 1, key=f"slider_{scheduler_option}")
+        for alg, (timeline, avg, executed) in resultados.items():
+            st.markdown(f"### {alg}")
+            fig = draw_gantt(executed, timeline, step)
+            st.pyplot(fig)
+            st.markdown(f"**Tiempo de Espera Promedio {alg}:** {avg:.2f} ciclos")
 
-        # Compactamos los datos con un expander opcional
-        with st.expander("Ver estadísticas del planificador"):
-            st.markdown(f"**Ciclo actual:** {step}")
-            st.markdown(f"**Tiempo de Espera Promedio:** {avg_waiting_time:.2f} ciclos")
-
-        fig = draw_gantt(executed, timeline, step)
-        st.pyplot(fig)
