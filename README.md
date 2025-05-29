@@ -2,6 +2,8 @@
 
 - Gerardo Pineda 22880
 
+github: https://github.com/Gerax5/OS_Proyecto2
+
 ---
 
 # 💀 Simulador de Planificadores y Mecanismos de Sincronización
