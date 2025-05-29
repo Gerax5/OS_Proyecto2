@@ -18,7 +18,6 @@ def load_processes(uploaded_file):
 def show_calendarizacion_tab():
     st.header("Planificación de Procesos")
 
-    # Usamos columnas para hacer más compacto
     col1, col2 = st.columns(2)
 
     with col1:
