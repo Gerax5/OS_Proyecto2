@@ -1,33 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
-
-class Recurso:
-    def __init__(self, name, count):
-        self.name = name
-        self.count = count
-        self.in_use = 0
-
-    def try_access(self):
-        raise NotImplementedError
-
-    def release(self):
-        if self.in_use > 0:
-            self.in_use -= 1
-
-class Mutex(Recurso):
-    def try_access(self):
-        if self.in_use == 0:
-            self.in_use = 1
-            return True
-        return False
-
-class Semaforo(Recurso):
-    def try_access(self):
-        if self.in_use < self.count:
-            self.in_use += 1
-            return True
-        return False
+from Recursos import Mutex, Semaforo
 
 def parse_processes(file):
     return [line.strip().split(",") for line in file.read().decode("utf-8").strip().split("\n")]
@@ -49,48 +23,57 @@ def parse_actions(file):
 
 def simulate_with_mechanism(actions, resource_defs, mechanism):
     timeline = []
-    waiting_queue = []
 
-    # Recursos
-    resources = {}
-    for name, count in resource_defs.items():
-        resources[name] = Mutex(name, 1) if mechanism == "Mutex" else Semaforo(name, count)
+    resources = {
+        name: Mutex(name, 1) if count == 1 else Semaforo(name, count)
+        for name, count in resource_defs.items()
+    }
 
-    # Acciones aún no ejecutadas
-    pending_actions = actions[:]
-    executed_actions = set()
-    cycle = 0
+    # Acciones por proceso
+    acciones_por_proceso = {}
+    for pid, accion, recurso, ciclo in actions:
+        acciones_por_proceso.setdefault(pid, []).append((accion, recurso, ciclo))
 
-    while pending_actions or waiting_queue:
-        # Agregar acciones nuevas de este ciclo
-        acciones_en_ciclo = [a for a in pending_actions if a[3] == cycle]
-        waiting_queue.extend(acciones_en_ciclo)
-        pending_actions = [a for a in pending_actions if a not in acciones_en_ciclo]
+    acciones_en_proceso = {pid: None for pid in acciones_por_proceso}
+    recursos_a_liberar = []
+    ciclo = 0
+    MAX_CICLOS = 200
 
-        liberaciones_pendientes = []
-        still_waiting = []
-
-        for pid, accion, recurso, orig_ciclo in waiting_queue:
-            if (pid, accion, recurso, orig_ciclo) in executed_actions:
-                continue  # Ya fue atendida
-
-            r = resources[recurso]
-            if r.try_access():
-                timeline.append((cycle, pid, recurso, accion, "ACCESSED"))
-                executed_actions.add((pid, accion, recurso, orig_ciclo))
-                liberaciones_pendientes.append(recurso)
-            else:
-                timeline.append((cycle, pid, recurso, accion, "WAITING"))
-                still_waiting.append((pid, accion, recurso, orig_ciclo))
-
-        for recurso in liberaciones_pendientes:
+    while ciclo < MAX_CICLOS:
+        for recurso in recursos_a_liberar:
+            print(f"[{ciclo}] LIBERA {recurso}")
             resources[recurso].release()
+        recursos_a_liberar = []
 
-        waiting_queue = still_waiting
-        cycle += 1
+        hay_pendientes = False
 
-        if cycle > 200:
-            break  # evitar ciclos infinitos por error
+        for pid in acciones_por_proceso:
+            if acciones_en_proceso[pid] is None and acciones_por_proceso[pid]:
+                accion, recurso, ciclo_obj = acciones_por_proceso[pid][0]
+                if ciclo >= ciclo_obj:
+                    acciones_en_proceso[pid] = (accion, recurso, ciclo_obj)
+
+            if acciones_en_proceso[pid] is not None:
+                accion, recurso, ciclo_obj = acciones_en_proceso[pid]
+                r = resources[recurso]
+                print(f"[{ciclo}] {pid} intenta {accion} en {recurso} (ciclo objetivo: {ciclo_obj})")
+                print(f"    Estado recurso: in_use={r.in_use}, count={r.count}")
+                if r.try_access():
+                    print(f"[{ciclo}] {pid} ACCEDE a {recurso}")
+                    timeline.append((ciclo, pid, recurso, accion, "ACCESSED"))
+                    recursos_a_liberar.append(recurso)
+                    acciones_por_proceso[pid].pop(0)
+                    acciones_en_proceso[pid] = None
+                else:
+                    print(f"[{ciclo}] {pid} ESPERA por {recurso}")
+                    timeline.append((ciclo, pid, recurso, accion, "WAITING"))
+
+                hay_pendientes = True
+
+        if not hay_pendientes:
+            break
+
+        ciclo += 1
 
     return timeline
 
@@ -142,43 +125,49 @@ def build_state_table(timeline):
 # Componente de interfaz
 # ---------------------------------------
 def show_sincronizacion_tab():
-    st.header("🔗 Simulación de Mecanismos de Sincronización")
+    st.header("Simulación de Mecanismos de Sincronización")
 
-    with st.expander("📄 Cargar archivos de simulación"):
+    with st.expander("Cargar archivos de simulación"):
         p_file = st.file_uploader("Archivo de procesos", type="txt", key="proc_file")
         r_file = st.file_uploader("Archivo de recursos", type="txt", key="res_file")
         a_file = st.file_uploader("Archivo de acciones", type="txt", key="act_file")
 
     if p_file and r_file and a_file:
-        st.markdown("### ⚙️ Configuración")
-        mechanism = st.radio("Selecciona mecanismo de sincronización", ["Mutex", "Semáforo"])
+        st.markdown("### Configuración Automática de Recursos")
+        st.info("Los recursos con `count = 1` se manejan como **Mutex**, y los que tienen `count > 1` como **Semáforos**.")
 
         processes = parse_processes(p_file)
-        resources = parse_resources(r_file)
+        resource_counts = parse_resources(r_file)
         actions = parse_actions(a_file)
 
-        if mechanism == "Semáforo":
-            st.markdown("### Configuración de semáforos")
-            semaphore_counts = {}
-            for resource in resources.keys():
-                semaphore_counts[resource] = st.number_input(
-                    f"Contador para {resource}:", min_value=1, value=resources[resource], key=f"sem_{resource}"
-                )
-            resources = semaphore_counts
+        st.markdown("### Recursos y tipo de sincronización asignado:")
+        resource_types = {}
+        for name, count in resource_counts.items():
+            tipo = "Mutex" if count == 1 else "Semáforo"
+            resource_types[name] = tipo
+            st.markdown(f"- **{name}**: {tipo} (count = {count})")
 
-        timeline = simulate_with_mechanism(actions, resources, mechanism)
+        resources = {}
+        for name, count in resource_counts.items():
+            if count == 1:
+                resources[name] = Mutex(name, 1)
+            else:
+                resources[name] = Semaforo(name, count)
+
+        timeline = simulate_with_mechanism(actions, resource_counts, "AUTOMATICO")
         max_cycle = max(c for c, *_ in timeline) + 1
 
         step = st.slider("Ciclo actual", 1, max_cycle, max_cycle, key="sync_slider")
         fig = draw_sync_gantt(timeline, step)
         st.pyplot(fig)
 
-        with st.expander("📋 Tabla de Estados por Ciclo"):
+        with st.expander("Tabla de Estados por Ciclo"):
             state_table = build_state_table(timeline)
             st.dataframe(state_table, use_container_width=True)
 
-        with st.expander("👁️ Ver timeline (datos crudos)"):
+        with st.expander("Ver timeline (datos crudos)"):
             st.dataframe(timeline, use_container_width=True)
+
 
 # ---------------------------------------
 # Ejecutar la interfaz
