@@ -24,8 +24,7 @@ def srtf_scheduler(processes):
                 waiting_times[pid] = time + 1 - original_map[pid][1] - arrival_map[pid]  
                 executed_processes.append(original_map[pid])
         else:
-            # CPU is idle
-            # timeline.append((time, "idle"))
+            timeline.append((time, "idle"))
             pass
 
         time += 1

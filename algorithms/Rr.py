@@ -19,7 +19,7 @@ def round_robin_scheduler(processes, quantum):
             index += 1
 
         if not queue:
-            # timeline.append((time, "idle"))
+            timeline.append((time, "idle"))
             time += 1
             continue
 
